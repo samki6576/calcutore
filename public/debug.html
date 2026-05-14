@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug - Meeting Cost Calculator</title>
+</head>
+<body>
+    <h1>Debug Page</h1>
+    <div id="env-check"></div>
+    <script>
+        // Check if environment variables are loading
+        const envCheck = document.getElementById('env-check');
+        envCheck.innerHTML = `
+            <h2>Environment Variables Status:</h2>
+            <ul>
+                <li>API Key: ${import.meta.env.VITE_FIREBASE_API_KEY ? '✅ Loaded' : '❌ Missing'}</li>
+                <li>Project ID: ${import.meta.env.VITE_FIREBASE_PROJECT_ID ? '✅ Loaded' : '❌ Missing'}</li>
+            </ul>
+        `;
+    </script>
+</body>
+</html>
