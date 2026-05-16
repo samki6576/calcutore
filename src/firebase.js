@@ -1,41 +1,40 @@
 ﻿import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, Timestamp, deleteDoc, doc } from 'firebase/firestore';
 
-// Read configuration from environment variables
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: "AIzaSyCAkOhsLbfAGzNF2wBlLMnHGuD17yf8nIc",
+  authDomain: "vitalsign-ai.firebaseapp.com",
+  projectId: "vitalsign-ai",
+  storageBucket: "vitalsign-ai.firebasestorage.app",
+  messagingSenderId: "702846984966",
+  appId: "1:702846984966:web:3493e1fd0fd88aeee73487"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-
-const MEETINGS_COLLECTION = 'meetings';
-const SAVINGS_COLLECTION = 'savings';
 
 export const addMeeting = async (meetingData) => {
   try {
     const totalCost = meetingData.attendees * meetingData.durationHours * meetingData.hourlyRate;
-    const docRef = await addDoc(collection(db, MEETINGS_COLLECTION), {
-      ...meetingData,
+    const docRef = await addDoc(collection(db, "meetings"), {
+      name: meetingData.name,
+      attendees: Number(meetingData.attendees),
+      durationHours: Number(meetingData.durationHours),
+      hourlyRate: Number(meetingData.hourlyRate),
+      date: meetingData.date,
       totalCost: totalCost,
       createdAt: Timestamp.now()
     });
     return { success: true, id: docRef.id };
   } catch (error) {
+    console.error("Add meeting error:", error);
     return { success: false, error: error.message };
   }
 };
 
 export const getMeetings = async () => {
   try {
-    const q = query(collection(db, MEETINGS_COLLECTION), orderBy('createdAt', 'desc'), limit(50));
+    const q = query(collection(db, "meetings"), orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
     const meetings = [];
     querySnapshot.forEach((doc) => {
@@ -43,13 +42,14 @@ export const getMeetings = async () => {
     });
     return { success: true, data: meetings };
   } catch (error) {
+    console.error("Get meetings error:", error);
     return { success: false, error: error.message, data: [] };
   }
 };
 
 export const deleteMeeting = async (meetingId) => {
   try {
-    await deleteDoc(doc(db, MEETINGS_COLLECTION, meetingId));
+    await deleteDoc(doc(db, "meetings", meetingId));
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -58,15 +58,16 @@ export const deleteMeeting = async (meetingId) => {
 
 export const getMeetingStats = async () => {
   try {
-    const meetings = await getMeetings();
-    if (!meetings.success) return { success: false, error: meetings.error };
+    const result = await getMeetings();
+    if (!result.success) return result;
     
-    const totalCost = meetings.data.reduce((sum, m) => sum + (m.totalCost || 0), 0);
-    const totalMeetings = meetings.data.length;
+    const meetings = result.data;
+    const totalCost = meetings.reduce((sum, m) => sum + (m.totalCost || 0), 0);
+    const totalMeetings = meetings.length;
     const avgCostPerMeeting = totalMeetings > 0 ? totalCost / totalMeetings : 0;
     
     const trend = {};
-    meetings.data.forEach(m => {
+    meetings.forEach(m => {
       const date = m.date;
       if (!trend[date]) trend[date] = { cost: 0, count: 0 };
       trend[date].cost += m.totalCost || 0;
@@ -77,7 +78,10 @@ export const getMeetingStats = async () => {
       date, cost: data.cost, meetings: data.count
     })).slice(-7);
     
-    return { success: true, data: { totalCost, totalMeetings, avgCostPerMeeting, costTrend } };
+    return {
+      success: true,
+      data: { totalCost, totalMeetings, avgCostPerMeeting, costTrend }
+    };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -85,7 +89,7 @@ export const getMeetingStats = async () => {
 
 export const saveSuggestion = async (meeting) => {
   try {
-    await addDoc(collection(db, SAVINGS_COLLECTION), {
+    await addDoc(collection(db, "savings"), {
       meetingId: meeting.id,
       meetingName: meeting.name,
       amount: meeting.totalCost,
@@ -99,7 +103,7 @@ export const saveSuggestion = async (meeting) => {
 
 export const getTotalSavings = async () => {
   try {
-    const querySnapshot = await getDocs(collection(db, SAVINGS_COLLECTION));
+    const querySnapshot = await getDocs(collection(db, "savings"));
     let total = 0;
     querySnapshot.forEach((doc) => {
       total += doc.data().amount || 0;
